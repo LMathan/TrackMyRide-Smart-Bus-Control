@@ -8,9 +8,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Initialize the map for the selected bus
     const busLocation = {
-        'Bus-1': { lat: 11.0301, lng: 77.0782 },
-        'Bus-2': { lat: 11.0500, lng: 77.0800 },
-        'Bus-3': { lat: 11.0600, lng: 77.0900 }
+        'Bus-1': { lat: 11.261935,lng: 77.604790 },
+        'Bus-2': { lat: 11.323809,lng: 77.674229 },
+        'Bus-3': { lat: 11.273612,lng: 77.580249 }
     };
 
     const location = busLocation[busName];
