@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smart Bus Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f8ff;
+        }
+        h1 {
+            color: #333;
+        }
+        .bus-list {
+            display: flex;
+            justify-content: center;
+            margin-top: 50px;
+        }
+        .bus {
+            margin: 0 20px;
+            padding: 20px;
+            background-color: #e6e6fa;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .bus:hover {
+            background-color: #d8bfd8;
+        }
+    </style>
+</head>
+<body>
+    <h1>Smart Bus Tracker</h1>
+    <div class="bus-list">
+        <div class="bus" onclick="location.href='/bus1page'">
+            <h2>Bus 1</h2>
+            <p>Live Tracking</p>
+        </div>
+        <div class="bus" onclick="location.href='/bus2page'">
+            <h2>Bus 2</h2>
+            <p>Static Info</p>
+        </div>
+        <div class="bus" onclick="location.href='/bus3page'">
+            <h2>Bus 3</h2>
+            <p>Static Info</p>
+        </div>
+    </div>
+</body>
+</html>
