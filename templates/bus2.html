@@ -1,45 +1,149 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Bus 2 - Static Info</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-        }
-        #map {
-            width: 80%;
-            height: 400px;
-            margin: 20px auto;
-        }
-        .seat {
-            display: inline-block;
-            margin: 10px;
-            padding: 15px;
-            border-radius: 8px;
-            color: #fff;
-            font-weight: bold;
-        }
-        .occupied {
-            background-color: #ff4d4d;
-        }
-        .vacant {
-            background-color: #4CAF50;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Bus 2 - Perundurai to Erode</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <style>
+    body {
+      background: #f8f9fa;
+      font-family: Arial, sans-serif;
+    }
+    h2 {
+      text-align: center;
+      margin-top: 20px;
+      font-weight: bold;
+    }
+    #map {
+      width: 90%;
+      height: 500px;
+      margin: 20px auto;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+    .seats {
+      text-align: center;
+      margin: 20px auto;
+    }
+    .seat-badge {
+      margin: 5px;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 20px;
+    }
+  </style>
 </head>
 <body>
-    <h1>Bus 2 - Static Info</h1>
-    <div id="map">
-        <iframe width="100%" height="400" src="https://maps.google.com/maps?q=12.9716,77.5946&z=15&output=embed"></iframe>
-    </div>
-    <h2>Seat Availability</h2>
-    <div>
-        <div class="seat vacant">Seat 1: Vacant</div>
-        <div class="seat occupied">Seat 2: Occupied</div>
-        <div class="seat vacant">Seat 3: Vacant</div>
-        <div class="seat occupied">Seat 4: Occupied</div>
-        <div class="seat vacant">Seat 5: Vacant</div>
-    </div>
+  <h2>Bus 2 - Perundurai to Erode</h2>
+  
+  <!-- Map -->
+  <div id="map"></div>
+
+  <!-- Seat Availability -->
+  <h3 class="text-center mt-4">Seat Availability</h3>
+  <div id="seatStatus" class="seats">
+    <span class="badge seat-badge bg-success">Seat 1: Vacant</span>
+    <span class="badge seat-badge bg-danger">Seat 2: Occupied</span>
+    <span class="badge seat-badge bg-success">Seat 3: Vacant</span>
+    <span class="badge seat-badge bg-danger">Seat 4: Occupied</span>
+    <span class="badge seat-badge bg-success">Seat 5: Vacant</span>
+  </div>
+
+  <!-- Google Maps Script -->
+  <script>
+    let map, directionsService, directionsRenderer, busMarker;
+
+    // Static bus location (example halfway between Perundurai and Erode)
+    const busLocation = { lat: 11.266185, lng: 77.600036 };
+
+    // Stops between Perundurai and Erode
+    const stops = [
+      { name: "Perundurai", location: { lat: 11.275, lng: 77.587 } },
+      { name: "Kongu Engg College", location: { lat: 11.275, lng: 77.609 } },
+      { name: "Nasiyanur", location: { lat: 11.336, lng: 77.640 } },
+      { name: "Thindal", location: { lat: 11.340, lng: 77.680 } },
+      { name: "Erode Bus Stand", location: { lat: 11.341, lng: 77.717 } }
+    ];
+
+    function initMap() {
+      map = new google.maps.Map(document.getElementById('map'), {
+        zoom: 12,
+        center: busLocation
+      });
+
+      directionsService = new google.maps.DirectionsService();
+      directionsRenderer = new google.maps.DirectionsRenderer({
+        map: map,
+        suppressMarkers: true,
+        polylineOptions: { strokeColor: "#007bff", strokeWeight: 5 }
+      });
+
+      // Draw route Perundurai → Erode
+      const request = {
+        origin: stops[0].location,
+        destination: stops[stops.length - 1].location,
+        travelMode: google.maps.TravelMode.DRIVING,
+        waypoints: stops.slice(1, stops.length - 1).map(s => ({ location: s.location }))
+      };
+
+      directionsService.route(request, (result, status) => {
+        if (status === "OK") {
+          directionsRenderer.setDirections(result);
+        }
+      });
+
+      // Add bus marker
+      busMarker = new google.maps.Marker({
+        position: busLocation,
+        map: map,
+        icon: {
+          url: "https://img.icons8.com/color/48/bus.png",
+          scaledSize: new google.maps.Size(40, 40)
+        },
+        title: "Bus 2 (Static Position)"
+      });
+
+      // Add stop markers
+      stops.forEach(stop => {
+        const marker = new google.maps.Marker({
+          position: stop.location,
+          map: map,
+          label: stop.name[0],
+          title: stop.name
+        });
+
+        // On click → calculate ETA
+        marker.addListener("click", () => {
+          calculateETA(stop);
+        });
+      });
+    }
+
+    // Calculate ETA using Distance Matrix API
+    function calculateETA(stop) {
+      const service = new google.maps.DistanceMatrixService();
+      service.getDistanceMatrix(
+        {
+          origins: [busLocation],
+          destinations: [stop.location],
+          travelMode: google.maps.TravelMode.DRIVING
+        },
+        (response, status) => {
+          if (status === "OK") {
+            const element = response.rows[0].elements[0];
+            const distance = element.distance.text;
+            const duration = element.duration.text;
+
+            alert(`Bus to ${stop.name}\nDistance: ${distance}\nETA: ${duration}`);
+          }
+        }
+      );
+    }
+  </script>
+
+  <!-- Google Maps API -->
+  <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC5bvSimZ2Pi2FreDllzbOqCD2HPrDM4ys&callback=initMap">
+  </script>
 </body>
 </html>
