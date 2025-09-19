@@ -3,16 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bus 1 - Live Tracking</title>
+    <title>Bus 1 - Live Tracking (Erode → Tiruppur)</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             text-align: center;
         }
         #map {
-            width: 80%;
-            height: 400px;
+            width: 90%;
+            height: 500px;
             margin: 20px auto;
+            border-radius: 10px;
         }
         .seat {
             display: inline-block;
@@ -31,7 +32,7 @@
     </style>
 </head>
 <body>
-    <h1>Bus 1 - Live Tracking</h1>
+    <h1>Bus 1 - Live Tracking (Erode → Tiruppur)</h1>
     
     <!-- Map container -->
     <div id="map"></div>
@@ -40,38 +41,76 @@
     <div id="seats"></div>
 
     <script>
-        let map;
-        let marker;
+        let map, marker, directionsService, directionsRenderer;
+        const stops = [
+            { name: "Erode Bus Stand", location: { lat: 11.341, lng: 77.717 } },
+            { name: "Perundurai", location: { lat: 11.275, lng: 77.587 } },
+            { name: "Chennimalai", location: { lat: 11.163, lng: 77.603 } },
+            { name: "Uthukuli", location: { lat: 11.165, lng: 77.442 } },
+            { name: "Tiruppur Old Bus Stand", location: { lat: 11.108, lng: 77.341 } }
+        ];
 
-        // Function to initialize the Google map
         function initMap() {
-            // Initialize map with default center (default values)
             map = new google.maps.Map(document.getElementById("map"), {
-                zoom: 15,
-                center: { lat: 0.0, lng: 0.0 }, // Default center, will be updated dynamically
+                zoom: 10,
+                center: stops[0].location
             });
 
-            // Initialize marker
-            marker = new google.maps.Marker({
-                position: { lat: 0.0, lng: 0.0 },
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer({
                 map: map,
-                title: "Bus Location"
+                suppressMarkers: true,
+                polylineOptions: { strokeColor: "#007bff", strokeWeight: 5 }
+            });
+
+            // Draw route Erode → Tiruppur
+            const request = {
+                origin: stops[0].location,
+                destination: stops[stops.length - 1].location,
+                travelMode: google.maps.TravelMode.DRIVING,
+                waypoints: stops.slice(1, stops.length - 1).map(s => ({ location: s.location }))
+            };
+            directionsService.route(request, (result, status) => {
+                if (status === "OK") {
+                    directionsRenderer.setDirections(result);
+                }
+            });
+
+            // Bus marker (will be updated live)
+            marker = new google.maps.Marker({
+                position: { lat: 0, lng: 0 },
+                map: map,
+                icon: {
+                    url: "https://img.icons8.com/color/48/bus.png",
+                    scaledSize: new google.maps.Size(40, 40)
+                },
+                title: "Bus 1 Live Location"
+            });
+
+            // Stop markers
+            stops.forEach(stop => {
+                const m = new google.maps.Marker({
+                    position: stop.location,
+                    map: map,
+                    label: stop.name[0],
+                    title: stop.name
+                });
+                m.addListener("click", () => calculateETA(stop));
             });
         }
 
-        // Function to update bus info (location and seats)
+        // Fetch live data from Flask
         function updateBusInfo() {
             fetch('/bus1')
                 .then(response => response.json())
                 .then(data => {
-                    // Update map with new location
                     const newLatLng = new google.maps.LatLng(data.lat, data.lng);
                     marker.setPosition(newLatLng);
                     map.setCenter(newLatLng);
 
-                    // Update Seats availability
+                    // Update seats
                     const seatsDiv = document.getElementById('seats');
-                    seatsDiv.innerHTML = ''; // Clear existing seat info
+                    seatsDiv.innerHTML = '';
                     data.seats.forEach((seat, index) => {
                         const seatDiv = document.createElement('div');
                         seatDiv.className = 'seat ' + (seat ? 'occupied' : 'vacant');
@@ -82,15 +121,29 @@
                 .catch(error => console.error('Error fetching bus data:', error));
         }
 
-        // Call the update function at regular intervals (every 2 seconds)
-        setInterval(updateBusInfo, 2000); // Update every 2 seconds
-        updateBusInfo(); // Initial call to populate data immediately
+        // Calculate ETA to a stop
+        function calculateETA(stop) {
+            const service = new google.maps.DistanceMatrixService();
+            service.getDistanceMatrix(
+                {
+                    origins: [marker.getPosition()],
+                    destinations: [stop.location],
+                    travelMode: google.maps.TravelMode.DRIVING
+                },
+                (response, status) => {
+                    if (status === "OK") {
+                        const element = response.rows[0].elements[0];
+                        alert(`Bus to ${stop.name}\nDistance: ${element.distance.text}\nETA: ${element.duration.text}`);
+                    }
+                }
+            );
+        }
 
-        // Load the map once the window is fully loaded
+        setInterval(updateBusInfo, 3000);
         window.onload = initMap;
     </script>
 
     <!-- Google Maps API -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=**************************&callback=initMap" async defer></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC5bvSimZ2Pi2FreDllzbOqCD2HPrDM4ys&callback=initMap" async defer></script>
 </body>
 </html>
