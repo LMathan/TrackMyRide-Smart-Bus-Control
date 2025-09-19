@@ -1,40 +1,172 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Bus 3 - Static Info</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-        }
-        #map {
-            width: 80%;
-            height: 400px;
-            margin: 20px auto;
-        }
-        .seat {
-            display: inline-block;
-            margin: 10px;
-            padding: 15px;
-            border-radius: 8px;
-            color: #fff;
-            font-weight: bold;
-        }
-        .occupied {
-            background-color: #ff4d4d;
-        }
-        .vacant {
-            background-color: #4CAF50;
-        }
-    </style>
+  <meta charset="utf-8" />
+  <title>Bus 4 — Erode to Madurai</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f8f9fa; font-family: Arial, sans-serif; }
+    .container { max-width: 1200px; margin: 18px auto; }
+    h1 { text-align:center; margin-bottom: 12px; font-weight:700; }
+    #map { width: 100%; height: 560px; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.12); }
+    .seats { text-align:center; margin: 18px 0 36px; }
+    .seat-badge { margin: 6px; padding: 10px 20px; font-size: 16px; border-radius: 20px; }
+  </style>
 </head>
 <body>
-    <h1>Bus 3 - Static Info</h1>
-    <div id="map">
-        <iframe width="100%" height="400" src="https://maps.google.com/maps?q=13.0827,80.2707&z=15&output=embed"></iframe>
+  <div class="container">
+    <h1>Bus 4 — Erode to Madurai</h1>
+    <div id="map"></div>
+    <h3 class="text-center mt-4">Seat Availability</h3>
+    <div id="seatStatus" class="seats">
+      <span class="badge seat-badge bg-success">Seat 1: Vacant</span>
+      <span class="badge seat-badge bg-danger">Seat 2: Occupied</span>
+      <span class="badge seat-badge bg-success">Seat 3: Vacant</span>
+      <span class="badge seat-badge bg-danger">Seat 4: Occupied</span>
+      <span class="badge seat-badge bg-success">Seat 5: Vacant</span>
     </div>
-    <h2>Seat Availability</h2>
-    <div>
-        <div class="seat occupied">Seat 1: Occupied</div
-::contentReference[oaicite:0]{index=0}
- 
+  </div>
+
+  <script>
+    // Static bus location (example: just left Erode)
+    const BUS_LOCATION = { lat: 11.341, lng: 77.717 }; 
+
+    // Major stops between Erode → Madurai
+    const PLACE_NAMES = [
+      "Erode Central Bus Terminus, Tamil Nadu",
+      "Karur Bus Stand, Tamil Nadu",
+      "Dindigul Bus Stand, Tamil Nadu",
+      "Tirumangalam Bus Stand, Tamil Nadu",
+      "Madurai MGR Bus Terminus, Madurai, Tamil Nadu"
+    ];
+
+    let map, directionsService, directionsRenderer;
+    let busMarker, infoWindow;
+    let stopMarkers = [];
+
+    function initMap() {
+      map = new google.maps.Map(document.getElementById('map'), {
+        center: BUS_LOCATION,
+        zoom: 8,
+        mapTypeControl: false,
+      });
+
+      infoWindow = new google.maps.InfoWindow();
+
+      directionsService = new google.maps.DirectionsService();
+      directionsRenderer = new google.maps.DirectionsRenderer({
+        map: map,
+        suppressMarkers: true,
+        polylineOptions: { strokeColor: "#007bff", strokeWeight: 6, strokeOpacity: 0.9 }
+      });
+
+      const request = {
+        origin: PLACE_NAMES[0],
+        destination: PLACE_NAMES[PLACE_NAMES.length - 1],
+        travelMode: google.maps.TravelMode.DRIVING,
+        waypoints: PLACE_NAMES.slice(1, PLACE_NAMES.length - 1).map(name => ({ location: name }))
+      };
+
+      directionsService.route(request, (result, status) => {
+        if (status === "OK") {
+          directionsRenderer.setDirections(result);
+
+          const legs = result.routes[0].legs;
+          const stops = [];
+          if (legs.length > 0) {
+            stops.push({ name: PLACE_NAMES[0], position: legs[0].start_location });
+            for (let i = 0; i < legs.length; i++) {
+              stops.push({ name: PLACE_NAMES[i + 1], position: legs[i].end_location });
+            }
+          }
+
+          addStopMarkers(stops);
+        } else {
+          console.error("Directions request failed:", status);
+        }
+      });
+
+      // Bus marker
+      busMarker = new google.maps.Marker({
+        position: BUS_LOCATION,
+        map: map,
+        title: "Bus Location",
+        icon: {
+          url: "https://img.icons8.com/color/48/bus.png",
+          scaledSize: new google.maps.Size(44, 44)
+        },
+        zIndex: 9999
+      });
+
+      busMarker.addListener("click", () => {
+        infoWindow.setContent(`<strong>Bus Location</strong><br>Lat: ${BUS_LOCATION.lat.toFixed(6)}<br>Lng: ${BUS_LOCATION.lng.toFixed(6)}`);
+        infoWindow.open(map, busMarker);
+      });
+    }
+
+    function addStopMarkers(stops) {
+      stopMarkers.forEach(m => m.setMap(null));
+      stopMarkers = [];
+
+      stops.forEach((stop, idx) => {
+        const marker = new google.maps.Marker({
+          position: stop.position,
+          map: map,
+          label: {
+            text: String(idx + 1),
+            color: "white",
+            fontWeight: "600"
+          },
+          title: stop.name
+        });
+
+        stopMarkers.push(marker);
+
+        marker.addListener("click", () => {
+          computeETAandShow(marker, stop.name);
+        });
+      });
+    }
+
+    function computeETAandShow(marker, stopName) {
+      const service = new google.maps.DistanceMatrixService();
+      service.getDistanceMatrix({
+        origins: [BUS_LOCATION],
+        destinations: [marker.getPosition()],
+        travelMode: google.maps.TravelMode.DRIVING,
+        unitSystem: google.maps.UnitSystem.METRIC
+      }, (response, status) => {
+        if (status !== "OK") {
+          infoWindow.setContent(`<b>${stopName}</b><br>ETA not available`);
+          infoWindow.open(map, marker);
+          return;
+        }
+        const element = response.rows[0].elements[0];
+        if (element.status !== "OK") {
+          infoWindow.setContent(`<b>${stopName}</b><br>Route not available`);
+          infoWindow.open(map, marker);
+          return;
+        }
+        const distanceText = element.distance.text;
+        const durationText = element.duration.text;
+        const html = `
+          <div style="min-width:180px;">
+            <h6 style="margin:0 0 6px 0;">${stopName}</h6>
+            <div><strong>Distance:</strong> ${distanceText}</div>
+            <div><strong>ETA:</strong> ${durationText}</div>
+            <div style="margin-top:6px;font-size:12px;color:#666;">(From bus location)</div>
+          </div>
+        `;
+        infoWindow.setContent(html);
+        infoWindow.open(map, marker);
+      });
+    }
+  </script>
+
+  <!-- Google Maps API -->
+  <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC5bvSimZ2Pi2FreDllzbOqCD2HPrDM4ys&callback=initMap">
+  </script>
+</body>
+</html>
